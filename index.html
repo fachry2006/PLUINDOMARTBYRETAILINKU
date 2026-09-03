@@ -57,6 +57,7 @@
             }
             #print-area, #print-area * {
                 visibility: visible;
+                display: block !important;
             }
             #print-area {
                 position: absolute;
@@ -403,11 +404,12 @@
 
         // Fetch CSV from repository with fallback to GitHub Raw
         async function fetchPLUData() {
-            updateDbStatus('loading', 'Memuat plu.csv...');
+            updateDbStatus('loading', 'Memuat PLUV2.csv...');
             
-            // Primary path: relative './plu.csv' (works on GitHub Pages and local server)
-            // Secondary path: GitHub Raw URL for direct remote execution
+            // Primary paths for PLUV2.csv with fallbacks to plu.csv
             const csvSources = [
+                './PLUV2.csv',
+                'https://raw.githubusercontent.com/fachry2006/PLUINDOMARTBYRETAILINKU/main/PLUV2.csv',
                 './plu.csv',
                 'https://raw.githubusercontent.com/fachry2006/PLUINDOMARTBYRETAILINKU/main/plu.csv'
             ];
@@ -430,7 +432,7 @@
                 pluDatabase = parseCSV(loadedText);
                 isDbLoaded = true;
                 updateDbStatus('success', `${pluDatabase.length} Data PLU Terhubung`);
-                showToast(`${pluDatabase.length} Data barang siap dicari!`);
+                showToast(`${pluDatabase.length} Data barang (PLUV2) siap dicari!`);
             } else {
                 console.warn('Memakai data cadangan internal.');
                 pluDatabase = fallbackDatabase;
@@ -442,7 +444,7 @@
             renderSingleCode();
         }
 
-        // Custom CSV Parser handling quotes and multiple commas
+        // Custom CSV Parser handling 2-column (PLU, NAME) and 3-column (PLU, NAME, TAG) formats
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             const result = [];
@@ -451,23 +453,32 @@
                 const line = lines[i].trim();
                 if (!line) continue;
 
-                let plu = "", desc = "", ptag = "";
+                let plu = "", desc = "", ptag = "E";
                 const firstComma = line.indexOf(',');
-                const lastComma = line.lastIndexOf(',');
 
-                if (firstComma !== -1 && lastComma > firstComma) {
+                if (firstComma !== -1) {
                     plu = line.substring(0, firstComma).trim().replace(/^"|"$/g, '');
-                    desc = line.substring(firstComma + 1, lastComma).trim().replace(/^"|"$/g, '');
-                    ptag = line.substring(lastComma + 1).trim().replace(/^"|"$/g, '');
-                } else if (firstComma !== -1) {
-                    plu = line.substring(0, firstComma).trim().replace(/^"|"$/g, '');
-                    desc = line.substring(firstComma + 1).trim().replace(/^"|"$/g, '');
+                    let rest = line.substring(firstComma + 1).trim();
+
+                    const lastComma = rest.lastIndexOf(',');
+                    if (lastComma !== -1) {
+                        const possibleTag = rest.substring(lastComma + 1).trim().replace(/^"|"$/g, '');
+                        // If the 3rd column is a short tag like E, D, PCS, etc.
+                        if (possibleTag.length <= 3 && possibleTag.toUpperCase() === possibleTag) {
+                            ptag = possibleTag || 'E';
+                            desc = rest.substring(0, lastComma).trim().replace(/^"|"$/g, '');
+                        } else {
+                            desc = rest.replace(/^"|"$/g, '');
+                        }
+                    } else {
+                        desc = rest.replace(/^"|"$/g, '');
+                    }
                 } else {
                     plu = line;
                 }
 
                 if (plu) {
-                    result.push({ plu, desc, ptag: ptag || 'E' });
+                    result.push({ plu, desc: desc || plu, ptag: ptag || 'E' });
                 }
             }
             return result;
@@ -654,7 +665,9 @@
                         lineColor: "#000",
                         width: 2,
                         height: 75,
-                        displayValue: false
+                        displayValue: false,
+                        margin: 10,
+                        background: "#ffffff"
                     });
                 } catch (e) {
                     try {
@@ -663,7 +676,9 @@
                             lineColor: "#000",
                             width: 2,
                             height: 75,
-                            displayValue: false
+                            displayValue: false,
+                            margin: 10,
+                            background: "#ffffff"
                         });
                     } catch (err) {
                         console.error('Barcode Generation Error:', err);
@@ -765,27 +780,38 @@
             const text = document.getElementById('single-code-input').value.trim() || 'barcode';
             const type = document.querySelector('input[name="code-type"]:checked').value;
             
-            let dataUrl = '';
             if (type === 'qr') {
                 const canvas = document.getElementById('single-qr-canvas');
-                dataUrl = canvas.toDataURL('image/png');
+                triggerDownload(canvas.toDataURL('image/png'), `RetaLink_${text}.png`);
             } else {
-                const svg = document.getElementById('single-barcode-svg');
-                const svgData = new XMLSerializer().serializeToString(svg);
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const img = new Image();
-                img.onload = function () {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
+                convertSvgToCanvas(document.getElementById('single-barcode-svg'), (canvas) => {
                     triggerDownload(canvas.toDataURL('image/png'), `RetaLink_${text}.png`);
-                };
-                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-                return;
+                });
             }
+        }
 
-            triggerDownload(dataUrl, `RetaLink_${text}.png`);
+        // Helper to convert SVG Barcode to Canvas with crisp white background
+        function convertSvgToCanvas(svgElement, callback) {
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            const img = new Image();
+
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width || 300;
+                canvas.height = img.height || 100;
+                const ctx = canvas.getContext('2d');
+                
+                // Fill white background for clear label printing/saving
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                URL.revokeObjectURL(url);
+                callback(canvas);
+            };
+            img.src = url;
         }
 
         function triggerDownload(url, filename) {
@@ -800,26 +826,33 @@
 
         function copySingleImage() {
             const type = document.querySelector('input[name="code-type"]:checked').value;
-            if (type !== 'qr') {
-                showToast('Salin gambar didukung untuk QR Code.', 'info');
-            }
-            const canvas = document.getElementById('single-qr-canvas');
-            canvas.toBlob(blob => {
+            
+            const handleBlobCopy = (blob) => {
                 try {
                     const item = new ClipboardItem({ 'image/png': blob });
                     navigator.clipboard.write([item]).then(() => {
-                        showToast('Gambar QR disalin!');
+                        showToast('Gambar berhasil disalin ke clipboard!');
                     }).catch(() => {
-                        showToast('Silakan gunakan unduh PNG.', 'info');
+                        showToast('Silakan gunakan tombol Unduh Gambar.', 'info');
                     });
                 } catch(e) {
-                    showToast('Gunakan tombol unduh PNG.', 'info');
+                    showToast('Gunakan tombol Unduh Gambar di perangkat ini.', 'info');
                 }
-            });
+            };
+
+            if (type === 'qr') {
+                const canvas = document.getElementById('single-qr-canvas');
+                canvas.toBlob(handleBlobCopy);
+            } else {
+                convertSvgToCanvas(document.getElementById('single-barcode-svg'), (canvas) => {
+                    canvas.toBlob(handleBlobCopy);
+                });
+            }
         }
 
         function printSingleSticker() {
             const previewCard = document.getElementById('single-preview-card');
+            const printArea = document.getElementById('print-area');
             const printContent = document.getElementById('print-content');
             
             printContent.innerHTML = '';
@@ -828,7 +861,9 @@
             clone.classList.add('w-[200px]', 'border-black');
             printContent.appendChild(clone);
 
+            printArea.classList.remove('hidden');
             window.print();
+            printArea.classList.add('hidden');
         }
 
         function updateBatchCount() {
@@ -902,6 +937,7 @@
 
         function printBatchGrid() {
             const container = document.getElementById('batch-results-container');
+            const printArea = document.getElementById('print-area');
             const printContent = document.getElementById('print-content');
             
             printContent.innerHTML = '';
@@ -912,7 +948,9 @@
                 printContent.appendChild(clone);
             }
 
+            printArea.classList.remove('hidden');
             window.print();
+            printArea.classList.add('hidden');
         }
 
         function saveToHistoryFromSingle() {
