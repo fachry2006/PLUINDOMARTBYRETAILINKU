@@ -2,307 +2,1054 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Januari 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetaLink - Kerja Retail Jadi Lebih Mudah</title>
+    <!-- Tailwind CSS for super-fast, responsive UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRious library for super-fast client-side QR generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <!-- JsBarcode library for standard retail 1D Barcode support -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- HTML5-QRCode Scanner for Live Camera Scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#16A34A',
+                        dark: '#111827',
+                        bgLight: '#F8FAFC',
+                        warning: '#F59E0B',
+                        error: '#EF4444',
+                        retail: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#16a34a',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#0f3e23',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        :root {
-            --sage-green: #5d6d5a;
-            --deep-charcoal: #1a1c1d;
-            --gold-accent: #b08d49;
-            --bg-off-white: #efebe3;
-            --paper-texture: url("https://www.transparenttextures.com/patterns/handmade-paper.png");
+        /* CSS Khusus Cetak Label Thermal & Paper */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #print-area, #print-area * {
+                visibility: visible;
+            }
+            #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 10px;
+                background: white;
+                color: black;
+            }
+            .no-print {
+                display: none !important;
+            }
         }
 
-        body {
-            font-family: 'Montserrat', sans-serif;
-            background-color: var(--bg-off-white);
-            color: var(--deep-charcoal);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            overflow: hidden;
-            padding: 1rem;
+        .touch-action-none {
+            touch-action: manipulation;
         }
 
-        .serif { font-family: 'Lora', serif; }
-        .heading { font-family: 'Playfair Display', serif; }
-
-        .fade-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
-            z-index: 40;
-        }
-        .fade-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .calendar-frame {
-            background: #ffffff;
-            padding: 1.5rem;
-            border-radius: 4px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            max-width: 380px;
-            width: 100%;
-            transition: all 0.6s cubic-bezier(0.2, 1, 0.3, 1);
-            position: relative;
-            z-index: 10;
-        }
-
-        .day {
-            aspect-ratio: 1 / 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            color: #ccc;
-        }
-
-        .special-day {
-            color: var(--deep-charcoal) !important;
-            font-weight: 600;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .special-day::before {
-            content: '';
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border: 1px solid var(--gold-accent);
-            border-radius: 50%;
-            background: rgba(176, 141, 73, 0.1);
-        }
-
-        .note-card {
-            background-color: #fffef0;
-            background-image: var(--paper-texture);
-            padding: 2.5rem 2rem;
-            width: 85%;
-            max-width: 320px;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -45%) scale(0.9) rotate(2deg);
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 55;
-            box-shadow: 
-                2px 2px 0 #e6e4d5,
-                4px 4px 0 #dad8c7,
-                15px 15px 40px rgba(0,0,0,0.2);
-            border-radius: 2px;
-        }
-
-        .note-card.active {
-            opacity: 1;
-            pointer-events: all;
-            transform: translate(-50%, -50%) scale(1) rotate(-1deg);
-        }
-
-        .note-card::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 10px;
-            background: linear-gradient(135deg, transparent 5px, #fffef0 0) 0 5px,
-                        linear-gradient(-135deg, transparent 5px, #fffef0 0) 0 5px;
-            background-size: 10px 10px;
-            transform: translateY(100%);
-        }
-
-        #full-message {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
+        .tab-content {
             display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
         }
-
-        .letter-wrap {
-            background-color: #ffffff;
-            background-image: var(--paper-texture);
-            width: 100%;
-            max-width: 450px;
-            max-height: 95vh;
-            padding: 3rem 2rem;
-            box-shadow: 0 50px 100px rgba(0,0,0,0.4);
-            transform: translateY(30px);
-            opacity: 0;
-            transition: all 0.7s ease;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            border-radius: 2px;
-            overflow: hidden; 
-        }
-
-        #full-message.active .letter-wrap {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .btn-black {
+        .tab-content.active {
             display: block;
-            width: 100%;
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: var(--deep-charcoal);
-            color: #fff;
-            font-size: 0.7rem;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-align: center;
         }
 
-        .close-btn {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: #aaa;
+        /* Custom Scrollbar for live search popup */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
         }
-
-        @media (max-width: 400px) {
-            .letter-wrap { padding: 2.5rem 1.5rem; }
-            .heading { font-size: 1.8rem; }
-            .serif { font-size: 0.85rem; }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
         }
     </style>
 </head>
-<body>
+<body class="bg-[#F8FAFC] dark:bg-[#111827] text-slate-800 dark:text-slate-100 font-sans min-h-screen antialiased flex flex-col selection:bg-primary selection:text-white">
 
-    <div id="overlay" class="fade-overlay" onclick="closeEverything()"></div>
+    <!-- Top Bar Navigation -->
+    <header class="bg-white dark:bg-[#111827] border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 transition-colors">
+        <div class="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/50 text-primary rounded-xl flex items-center justify-center font-black text-xl shadow-sm">
+                    <i class="fa-solid fa-link"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                        RetaLink
+                    </h1>
+                    <p class="text-xs font-normal text-slate-500 dark:text-slate-400">Kerja Retail Jadi Lebih Mudah.</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <!-- Database Load Status Badge -->
+                <div id="db-status-badge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700">
+                    <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="db-status-text">Memuat CSV...</span>
+                </div>
 
-    <header class="text-center mb-6 relative z-10">
-        <span class="text-[8px] tracking-[0.8em] text-gray-500 uppercase block mb-1 font-bold">Januari 2026</span>
-        <h1 class="heading italic font-bold text-gray-800 text-3xl">Momen Spesial</h1>
+                <button id="theme-toggle" class="p-2.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon text-lg" id="theme-icon"></i>
+                </button>
+            </div>
+        </div>
     </header>
 
-    <div class="calendar-frame" id="calendar-wrapper">
-        <div class="grid grid-cols-7 gap-1 mb-4 text-center">
-            <div class="text-[9px] font-bold text-gray-300">S</div>
-            <div class="text-[9px] font-bold text-gray-300">M</div>
-            <div class="text-[9px] font-bold text-gray-300">T</div>
-            <div class="text-[9px] font-bold text-gray-300">W</div>
-            <div class="text-[9px] font-bold text-gray-300">T</div>
-            <div class="text-[9px] font-bold text-gray-300">F</div>
-            <div class="text-[9px] font-bold text-gray-300">S</div>
+    <!-- Tab Controls (Sticky subheader) -->
+    <div class="bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-[65px] z-30">
+        <div class="max-w-xl mx-auto flex text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+            <button onclick="switchTab('tab-single')" id="btn-tab-single" class="tab-btn flex-1 py-3 px-1.5 text-center border-b-2 border-primary text-primary font-bold flex items-center justify-center gap-1.5 transition-all">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i> Cari & Code
+            </button>
+            <button onclick="switchTab('tab-scan')" id="btn-tab-scan" class="tab-btn flex-1 py-3 px-1.5 text-center border-b-2 border-transparent hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5 transition-all">
+                <i class="fa-solid fa-camera text-xs"></i> Scan Kamera
+            </button>
+            <button onclick="switchTab('tab-batch')" id="btn-tab-batch" class="tab-btn flex-1 py-3 px-1.5 text-center border-b-2 border-transparent hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5 transition-all">
+                <i class="fa-solid fa-layer-group text-xs"></i> Massal
+            </button>
+            <button onclick="switchTab('tab-history')" id="btn-tab-history" class="tab-btn flex-1 py-3 px-1.5 text-center border-b-2 border-transparent hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5 transition-all">
+                <i class="fa-solid fa-clock-rotate-left text-xs"></i> Riwayat
+            </button>
         </div>
-        <div id="calendar-days" class="grid grid-cols-7 gap-1"></div>
     </div>
 
-    <div id="sticky-note" class="note-card">
-        <h3 class="serif italic text-2xl mb-3 text-gray-800">Catatan Kecil</h3>
-        <p class="text-[11px] text-gray-500 font-medium leading-relaxed tracking-wide">
-            Untuk zaki, ada satu hal yang ingin kusampaikan hari ini.
-        </p>
-        <button onclick="showFullMessage()" class="btn-black mt-6">Baca Surat</button>
-    </div>
+    <!-- Main Container -->
+    <main class="max-w-xl mx-auto w-full p-4 flex-grow space-y-4">
 
-    <div id="full-message">
-        <div class="letter-wrap">
-            <div class="close-btn" onclick="hideFullMessage()">✕</div>
+        <!-- TAB 1: SINGLE GENERATOR + LIVE SEARCH PLU/NAMA -->
+        <div id="tab-single" class="tab-content active space-y-4">
             
-            <header class="mb-5">
-                <p class="text-[9px] tracking-[0.5em] text-gray-400 uppercase font-bold mb-2">Teruntuk zaki</p>
-                <h2 class="heading text-3xl text-gray-900 italic">Happy Birthday</h2>
-            </header>
-            
-            <div class="serif text-gray-700 leading-relaxed text-[13px] md:text-[15px]">
-                <p class="mb-4">zaki, selamat ulang tahun ya!</p>
+            <!-- Input & Search Card -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 space-y-3 relative">
                 
-                <p class="mb-4 italic">"May this year bring you closer to your dreams, surround you with people who truly care, and fill your days with laughter and unforgettable moments."</p>
-          <p class="mb-4">On your birthday, I just want you to be happy. Truly happy. You deserve it and more.</p>
+                <div class="flex items-center justify-between">
+                    <label class="block text-sm font-bold text-slate-800 dark:text-slate-100">
+                        <i class="fa-solid fa-magnifying-glass mr-1.5 text-primary"></i> Cari Nama Barang / Input PLU
+                    </label>
+                    <span id="csv-count-tag" class="text-[10px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
+                        CSV: Memuat...
+                    </span>
+                </div>
+
+                <!-- Live Search Box -->
+                <div class="relative">
+                    <input type="text" id="single-code-input" placeholder="Ketik nama barang (Bimoli, Sampoerna) atau PLU..."
+                        class="w-full text-base sm:text-lg font-medium px-4 py-3 pl-11 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary dark:bg-slate-800 dark:text-white transition outline-none"
+                        autofocus autocomplete="off" autocorrect="off" spellcheck="false" onkeyup="handleSearchInput(event)">
+                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                    <button id="clear-single-input" onclick="clearSingleInput()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+
+                    <!-- Auto-complete Search Suggestions Dropdown -->
+                    <div id="search-results-dropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Tipe Output Radio & Size -->
+                <div class="flex items-center justify-between pt-1 text-sm">
+                    <div class="flex items-center space-x-5">
+                        <label class="flex items-center space-x-2 cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
+                            <input type="radio" name="code-type" value="qr" checked onchange="renderSingleCode()" class="w-4 h-4 text-primary focus:ring-primary">
+                            <span>QR Code</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
+                            <input type="radio" name="code-type" value="barcode" onchange="renderSingleCode()" class="w-4 h-4 text-primary focus:ring-primary">
+                            <span>Barcode Garis</span>
+                        </label>
+                    </div>
+
+                    <select id="single-size-select" onchange="renderSingleCode()" class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 font-medium text-slate-700 dark:text-slate-200">
+                        <option value="200">Sedang</option>
+                        <option value="300" selected>Besar</option>
+                        <option value="400">Jumbo</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- Display Preview Card -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-5 flex flex-col items-center justify-center text-center">
                 
-                <p class="mb-4">Sekali lagi, happy birthday ya!</p>
-                
-                <div class="mt-6 pt-5 border-t border-gray-100">
-                    <p class="text-[10px] italic text-gray-400 mb-1">Penuh doa,</p>
-                    <p class="text-lg font-bold text-gray-800 tracking-tight">fina</p>
+                <!-- Label Sticker Preview Box -->
+                <div id="single-preview-card" class="bg-white text-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 w-full flex flex-col items-center justify-center my-1">
+                    
+                    <!-- Matched Product Description Badge (If found in CSV) -->
+                    <div id="matched-product-info" class="w-full bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl p-2.5 mb-2 text-center transition">
+                        <div class="flex items-center justify-center gap-1.5 mb-0.5">
+                            <span class="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase" id="preview-ptag">TAG: E</span>
+                            <span class="text-xs font-mono font-bold text-slate-600" id="preview-plu-tag">PLU: 10010091</span>
+                        </div>
+                        <h3 id="preview-item-desc" class="font-extrabold text-sm text-slate-900 uppercase leading-snug">
+                            SAMPOERNA, ROKOK FILTER MILD (PCS) MERAH 16'S BKS
+                        </h3>
+                    </div>
+
+                    <!-- QR / Barcode Canvas Container -->
+                    <div class="my-2 flex items-center justify-center min-h-[140px] w-full">
+                        <canvas id="single-qr-canvas" class="max-w-full h-auto drop-shadow-sm"></canvas>
+                        <svg id="single-barcode-svg" class="hidden max-w-full h-auto"></svg>
+                    </div>
+
+                    <!-- Code text below -->
+                    <p id="preview-code" class="font-mono text-sm font-bold tracking-widest text-slate-800 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200 max-w-full truncate">
+                        10010091
+                    </p>
+                </div>
+
+                <!-- Quick Actions Toolbar -->
+                <div class="grid grid-cols-2 gap-2.5 w-full mt-4">
+                    <button onclick="downloadSinglePNG()" class="touch-action-none bg-primary hover:bg-emerald-700 text-white font-medium py-3 px-2 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-download"></i> Simpan Gambar
+                    </button>
+                    <button onclick="copySingleImage()" class="touch-action-none bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-medium py-3 px-2 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-copy"></i> Salin Gambar
+                    </button>
+                    <button onclick="printSingleSticker()" class="touch-action-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-2 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-print"></i> Cetak Label
+                    </button>
+                    <button onclick="saveToHistoryFromSingle()" class="touch-action-none bg-amber-500 hover:bg-amber-600 text-white font-medium py-3 px-2 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-bookmark"></i> Simpan Riwayat
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 2: LIVE CAMERA SCANNER -->
+        <div id="tab-scan" class="tab-content space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800 dark:text-slate-100">Scan Barcode / QR Barang</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Arahkan kamera ke barcode fisik barang di rak.</p>
+                    </div>
+                    <button onclick="toggleCameraScanner()" id="btn-toggle-cam" class="bg-primary hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-xl transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-camera"></i> <span id="cam-btn-text">Buka Kamera</span>
+                    </button>
+                </div>
+
+                <!-- Camera viewport container -->
+                <div id="reader-container" class="relative overflow-hidden rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 min-h-[220px] flex items-center justify-center">
+                    <div id="reader" class="w-full"></div>
+                    <div id="cam-placeholder" class="text-center p-6 text-slate-400">
+                        <i class="fa-solid fa-barcode text-4xl mb-2 opacity-40"></i>
+                        <p class="text-xs font-medium">Klik tombol <b>Buka Kamera</b> untuk mulai scan.</p>
+                    </div>
+                </div>
+
+                <!-- Scan Result Box -->
+                <div id="scan-result-box" class="hidden bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check"></i> Barcode Terdeteksi!
+                        </span>
+                        <span id="scan-ptag" class="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">TAG: -</span>
+                    </div>
+                    <p id="scan-desc" class="font-extrabold text-sm text-slate-900 dark:text-white uppercase">Nama Barang</p>
+                    <p id="scan-code" class="font-mono text-xs text-slate-600 dark:text-slate-300 font-bold">PLU: -</p>
+                    
+                    <button onclick="useScannedCode()" class="w-full bg-primary hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-qrcode"></i> Buat QR & Barcode Barang Ini
+                    </button>
                 </div>
             </div>
         </div>
+
+        <!-- TAB 3: BATCH GENERATOR -->
+        <div id="tab-batch" class="tab-content space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800 dark:text-slate-100">Cetak Banyak Sekaligus</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Masukkan 1 PLU per baris. Otomatis tarik data nama dari CSV.</p>
+                    </div>
+                    <span class="text-xs font-semibold bg-emerald-50 text-primary border border-emerald-200 dark:bg-emerald-950/60 dark:border-emerald-800/50 px-2.5 py-1 rounded-full" id="batch-count-badge">0 Kode</span>
+                </div>
+
+                <textarea id="batch-input" rows="4" placeholder="Contoh:&#10;10010091&#10;10008989&#10;10005482"
+                    oninput="updateBatchCount()"
+                    class="w-full font-mono text-sm p-3 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary dark:bg-slate-800 dark:text-white outline-none transition"></textarea>
+
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                    <div class="flex items-center space-x-4 text-sm font-medium text-slate-700 dark:text-slate-200">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="batch-type" value="qr" checked class="text-primary focus:ring-primary">
+                            <span>Format QR</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" name="batch-type" value="barcode" class="text-primary focus:ring-primary">
+                            <span>Format Barcode</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="generateBatch()" class="flex-1 bg-primary hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 text-xs">
+                            <i class="fa-solid fa-gears"></i> Generate
+                        </button>
+                        <button onclick="printBatchGrid()" id="btn-print-batch" disabled class="flex-1 disabled:opacity-50 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-3 rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 text-xs">
+                            <i class="fa-solid fa-print"></i> Cetak
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Container Preview -->
+            <div id="batch-results-container" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div class="col-span-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400">
+                    <i class="fa-solid fa-qrcode text-3xl mb-2 opacity-30 text-primary"></i>
+                    <p class="text-xs font-normal">Ketik daftar nomor PLU lalu klik tombol <b class="text-slate-700 dark:text-slate-200">Generate</b>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: HISTORY -->
+        <div id="tab-history" class="tab-content space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800 dark:text-slate-100">Riwayat Simpanan Kode</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-normal">Tersimpan di browser HP ini.</p>
+                    </div>
+                    <button onclick="clearHistory()" class="text-xs bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-500 dark:text-red-400 px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-900/50 transition font-medium">
+                        <i class="fa-solid fa-trash mr-1"></i> Hapus
+                    </button>
+                </div>
+
+                <div id="history-list" class="space-y-2">
+                    <!-- History items populated via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Hidden Print Area for Thermal / Paper Printing -->
+    <div id="print-area" class="hidden">
+        <div id="print-content" class="flex flex-wrap gap-4 items-start">
+            <!-- Dynamically populated when printing -->
+        </div>
+    </div>
+
+    <!-- Toast Notification Message Box -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 transform translate-y-20 opacity-0 transition-all duration-300 ease-out bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-2.5 rounded-2xl shadow-lg flex items-center space-x-2.5 pointer-events-none text-xs">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-primary text-base"></i>
+        <span id="toast-message" class="font-medium">Notifikasi</span>
     </div>
 
     <script>
-        const daysContainer = document.getElementById('calendar-days');
-        const stickyNote = document.getElementById('sticky-note');
-        const overlay = document.getElementById('overlay');
-        const wrapper = document.getElementById('calendar-wrapper');
-        const modal = document.getElementById('full-message');
+        // Global Application State
+        let currentQR = null;
+        let pluDatabase = []; // Holds items parsed from plu.csv
+        let isDbLoaded = false;
+        let html5QrcodeScanner = null;
+        let isCameraActive = false;
+        let lastScannedCode = '';
 
-        function init() {
-            for (let i = 0; i < 4; i++) {
-                const empty = document.createElement('div');
-                empty.className = 'day';
-                daysContainer.appendChild(empty);
-            }
+        // Default Sample Fallback if CSV is unreachable
+        const fallbackDatabase = [
+            { plu: "10010091", desc: "SAMPOERNA, ROKOK FILTER MILD (PCS) MERAH 16'S BKS", ptag: "E" },
+            { plu: "10008989", desc: "BIMOLI, MINYAK GORENG (REFILL) 2000mL PCH", ptag: "E" },
+            { plu: "10005482", desc: "SUNLIGHT, PENCUCI PIRING NEW REF LIME 700/650mL PCH", ptag: "E" },
+            { plu: "20070618", desc: "MARLBORO, ROKOK FILTER BLACK 20'S BKS", ptag: "D" },
+            { plu: "20069208", desc: "LE MINERALE, AIR MINERAL 600mL BTL", ptag: "E" },
+            { plu: "10005838", desc: "FILMA, MINYAK GORENG REFILL 2000mL PCH", ptag: "D" }
+        ];
 
-            for (let d = 1; d <= 31; d++) {
-                const dayEl = document.createElement('div');
-                dayEl.className = 'day font-medium';
-                dayEl.textContent = d;
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initQR();
+            setupEventListeners();
+            loadHistory();
+            fetchPLUData();
+        });
 
-                if (d === 19) {
-                    dayEl.classList.add('special-day');
-                    dayEl.onclick = (e) => {
-                        e.stopPropagation();
-                        openNote();
-                    };
+        // Fetch CSV from repository with fallback to GitHub Raw
+        async function fetchPLUData() {
+            updateDbStatus('loading', 'Memuat plu.csv...');
+            
+            // Primary path: relative './plu.csv' (works on GitHub Pages and local server)
+            // Secondary path: GitHub Raw URL for direct remote execution
+            const csvSources = [
+                './plu.csv',
+                'https://raw.githubusercontent.com/fachry2006/PLUINDOMARTBYRETAILINKU/main/plu.csv'
+            ];
+
+            let loadedText = null;
+
+            for (let source of csvSources) {
+                try {
+                    const response = await fetch(source);
+                    if (response.ok) {
+                        loadedText = await response.text();
+                        break;
+                    }
+                } catch (e) {
+                    console.warn('Gagal memuat dari source:', source, e);
                 }
-                daysContainer.appendChild(dayEl);
+            }
+
+            if (loadedText) {
+                pluDatabase = parseCSV(loadedText);
+                isDbLoaded = true;
+                updateDbStatus('success', `${pluDatabase.length} Data PLU Terhubung`);
+                showToast(`${pluDatabase.length} Data barang siap dicari!`);
+            } else {
+                console.warn('Memakai data cadangan internal.');
+                pluDatabase = fallbackDatabase;
+                isDbLoaded = true;
+                updateDbStatus('warning', 'Data Cadangan Aktif');
+            }
+
+            // Re-render single preview with updated database match
+            renderSingleCode();
+        }
+
+        // Custom CSV Parser handling quotes and multiple commas
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/);
+            const result = [];
+
+            for (let i = 1; i < lines.length; i++) { // Skip header row
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                let plu = "", desc = "", ptag = "";
+                const firstComma = line.indexOf(',');
+                const lastComma = line.lastIndexOf(',');
+
+                if (firstComma !== -1 && lastComma > firstComma) {
+                    plu = line.substring(0, firstComma).trim().replace(/^"|"$/g, '');
+                    desc = line.substring(firstComma + 1, lastComma).trim().replace(/^"|"$/g, '');
+                    ptag = line.substring(lastComma + 1).trim().replace(/^"|"$/g, '');
+                } else if (firstComma !== -1) {
+                    plu = line.substring(0, firstComma).trim().replace(/^"|"$/g, '');
+                    desc = line.substring(firstComma + 1).trim().replace(/^"|"$/g, '');
+                } else {
+                    plu = line;
+                }
+
+                if (plu) {
+                    result.push({ plu, desc, ptag: ptag || 'E' });
+                }
+            }
+            return result;
+        }
+
+        function updateDbStatus(state, text) {
+            const badge = document.getElementById('db-status-badge');
+            const dot = document.getElementById('db-status-dot');
+            const statusText = document.getElementById('db-status-text');
+            const csvTag = document.getElementById('csv-count-tag');
+
+            badge.classList.remove('hidden');
+            statusText.textContent = text;
+            if (csvTag) csvTag.textContent = text;
+
+            if (state === 'loading') {
+                dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            } else if (state === 'success') {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-blue-500';
             }
         }
 
-        function openNote() {
-            stickyNote.classList.add('active');
-            overlay.classList.add('active');
-            wrapper.style.transform = 'scale(0.9) blur(4px)';
-            wrapper.style.filter = 'grayscale(0.8)';
+        function initTheme() {
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-icon').className = 'fa-solid fa-sun text-amber-400 text-lg';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-icon').className = 'fa-solid fa-moon text-lg';
+            }
+
+            document.getElementById('theme-toggle').addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    document.getElementById('theme-icon').className = 'fa-solid fa-moon text-lg';
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    document.getElementById('theme-icon').className = 'fa-solid fa-sun text-amber-400 text-lg';
+                }
+            });
         }
 
-        function showFullMessage() {
-            stickyNote.classList.remove('active');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('active'), 50);
+        function initQR() {
+            const canvas = document.getElementById('single-qr-canvas');
+            currentQR = new QRious({
+                element: canvas,
+                size: 300,
+                value: '10010091',
+                level: 'H'
+            });
+
+            const input = document.getElementById('single-code-input');
+            input.value = '10010091';
+            renderSingleCode();
         }
 
-        function hideFullMessage() {
-            modal.classList.remove('active');
+        function setupEventListeners() {
+            const singleInput = document.getElementById('single-code-input');
+            const clearBtn = document.getElementById('clear-single-input');
+
+            singleInput.addEventListener('input', () => {
+                if (singleInput.value.trim().length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+                renderSingleCode();
+            });
+
+            // Close dropdown search when clicking outside
+            document.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('search-results-dropdown');
+                const input = document.getElementById('single-code-input');
+                if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+
+        // Live typing search logic across PLU and DESC
+        function handleSearchInput(e) {
+            const query = e.target.value.trim().toLowerCase();
+            const dropdown = document.getElementById('search-results-dropdown');
+
+            if (query.length < 2 || pluDatabase.length === 0) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            // Filter up to 12 matching items for instant display
+            const matches = pluDatabase.filter(item => 
+                item.plu.toLowerCase().includes(query) || 
+                item.desc.toLowerCase().includes(query)
+            ).slice(0, 12);
+
+            if (matches.length === 0) {
+                dropdown.innerHTML = `
+                    <div class="p-3 text-xs text-center text-slate-400">
+                        Barang tidak ditemukan di database CSV.
+                    </div>
+                `;
+            } else {
+                dropdown.innerHTML = matches.map(item => `
+                    <div onclick="selectSearchItem('${item.plu}')" class="p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer transition flex items-center justify-between text-left">
+                        <div class="truncate mr-2">
+                            <p class="font-extrabold text-xs text-slate-900 dark:text-white truncate">${item.desc}</p>
+                            <p class="font-mono text-[11px] text-slate-500 dark:text-slate-400">PLU: ${item.plu}</p>
+                        </div>
+                        <span class="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-full shrink-0">
+                            ${item.ptag ? 'TAG ' + item.ptag : 'PLU'}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectSearchItem(plu) {
+            const input = document.getElementById('single-code-input');
+            input.value = plu;
+            document.getElementById('clear-single-input').classList.remove('hidden');
+            document.getElementById('search-results-dropdown').classList.add('hidden');
+            renderSingleCode();
+        }
+
+        // Lookup PLU item from memory database
+        function findItemByPLU(code) {
+            if (!code) return null;
+            const cleaned = code.trim();
+            return pluDatabase.find(item => item.plu === cleaned) || null;
+        }
+
+        // Render Single QR Code or Barcode 1D instantly + match details
+        function renderSingleCode() {
+            const text = document.getElementById('single-code-input').value.trim() || 'KODE-KOSONG';
+            const type = document.querySelector('input[name="code-type"]:checked').value;
+            const size = parseInt(document.getElementById('single-size-select').value);
+
+            const qrCanvas = document.getElementById('single-qr-canvas');
+            const barcodeSvg = document.getElementById('single-barcode-svg');
+            const previewCode = document.getElementById('preview-code');
+
+            const matchInfoBox = document.getElementById('matched-product-info');
+            const itemDesc = document.getElementById('preview-item-desc');
+            const itemPluTag = document.getElementById('preview-plu-tag');
+            const itemPtag = document.getElementById('preview-ptag');
+
+            previewCode.textContent = text;
+
+            // Match with CSV Database
+            const matched = findItemByPLU(text);
+            if (matched) {
+                matchInfoBox.classList.remove('hidden');
+                itemDesc.textContent = matched.desc;
+                itemPluTag.textContent = `PLU: ${matched.plu}`;
+                itemPtag.textContent = `TAG: ${matched.ptag || 'E'}`;
+            } else {
+                matchInfoBox.classList.remove('hidden');
+                itemDesc.textContent = "BARANG / KODE CUSTOM";
+                itemPluTag.textContent = `PLU: ${text}`;
+                itemPtag.textContent = `TAG: -`;
+            }
+
+            if (type === 'qr') {
+                qrCanvas.classList.remove('hidden');
+                barcodeSvg.classList.add('hidden');
+                
+                currentQR.set({
+                    size: size,
+                    value: text
+                });
+            } else {
+                qrCanvas.classList.add('hidden');
+                barcodeSvg.classList.remove('hidden');
+
+                try {
+                    JsBarcode("#single-barcode-svg", text, {
+                        format: "CODE128",
+                        lineColor: "#000",
+                        width: 2,
+                        height: 75,
+                        displayValue: false
+                    });
+                } catch (e) {
+                    try {
+                        JsBarcode("#single-barcode-svg", text, {
+                            format: "auto",
+                            lineColor: "#000",
+                            width: 2,
+                            height: 75,
+                            displayValue: false
+                        });
+                    } catch (err) {
+                        console.error('Barcode Generation Error:', err);
+                    }
+                }
+            }
+        }
+
+        function clearSingleInput() {
+            const input = document.getElementById('single-code-input');
+            input.value = '';
+            document.getElementById('clear-single-input').classList.add('hidden');
+            document.getElementById('search-results-dropdown').classList.add('hidden');
+            input.focus();
+            renderSingleCode();
+        }
+
+        function toggleCameraScanner() {
+            if (isCameraActive) {
+                stopCameraScanner();
+            } else {
+                startCameraScanner();
+            }
+        }
+
+        function startCameraScanner() {
+            const placeholder = document.getElementById('cam-placeholder');
+            const btnText = document.getElementById('cam-btn-text');
+
+            placeholder.classList.add('hidden');
+            btnText.textContent = "Tutup Kamera";
+            isCameraActive = true;
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 180 } };
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess
+            ).catch(err => {
+                showToast("Tidak dapat mengakses kamera HP.", "error");
+                stopCameraScanner();
+            });
+        }
+
+        function stopCameraScanner() {
+            if (html5QrcodeScanner && isCameraActive) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    resetCamUI();
+                }).catch(() => {
+                    resetCamUI();
+                });
+            } else {
+                resetCamUI();
+            }
+        }
+
+        function resetCamUI() {
+            isCameraActive = false;
+            document.getElementById('cam-placeholder').classList.remove('hidden');
+            document.getElementById('cam-btn-text').textContent = "Buka Kamera";
+        }
+
+        function onScanSuccess(decodedText) {
+            lastScannedCode = decodedText.trim();
+            const resultBox = document.getElementById('scan-result-box');
+            const scanDesc = document.getElementById('scan-desc');
+            const scanCode = document.getElementById('scan-code');
+            const scanPtag = document.getElementById('scan-ptag');
+
+            const matched = findItemByPLU(lastScannedCode);
+            if (matched) {
+                scanDesc.textContent = matched.desc;
+                scanCode.textContent = `PLU: ${matched.plu}`;
+                scanPtag.textContent = `TAG: ${matched.ptag}`;
+            } else {
+                scanDesc.textContent = "BARANG TIDAK TERDAFTAR DI CSV";
+                scanCode.textContent = `KODE: ${lastScannedCode}`;
+                scanPtag.textContent = `TAG: -`;
+            }
+
+            resultBox.classList.remove('hidden');
+            showToast("Hasil scan terdeteksi!");
+        }
+
+        function useScannedCode() {
+            if (lastScannedCode) {
+                switchTab('tab-single');
+                document.getElementById('single-code-input').value = lastScannedCode;
+                document.getElementById('clear-single-input').classList.remove('hidden');
+                renderSingleCode();
+                stopCameraScanner();
+            }
+        }
+
+        function downloadSinglePNG() {
+            const text = document.getElementById('single-code-input').value.trim() || 'barcode';
+            const type = document.querySelector('input[name="code-type"]:checked').value;
+            
+            let dataUrl = '';
+            if (type === 'qr') {
+                const canvas = document.getElementById('single-qr-canvas');
+                dataUrl = canvas.toDataURL('image/png');
+            } else {
+                const svg = document.getElementById('single-barcode-svg');
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = function () {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    triggerDownload(canvas.toDataURL('image/png'), `RetaLink_${text}.png`);
+                };
+                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                return;
+            }
+
+            triggerDownload(dataUrl, `RetaLink_${text}.png`);
+        }
+
+        function triggerDownload(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Gambar berhasil diunduh!');
+        }
+
+        function copySingleImage() {
+            const type = document.querySelector('input[name="code-type"]:checked').value;
+            if (type !== 'qr') {
+                showToast('Salin gambar didukung untuk QR Code.', 'info');
+            }
+            const canvas = document.getElementById('single-qr-canvas');
+            canvas.toBlob(blob => {
+                try {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    navigator.clipboard.write([item]).then(() => {
+                        showToast('Gambar QR disalin!');
+                    }).catch(() => {
+                        showToast('Silakan gunakan unduh PNG.', 'info');
+                    });
+                } catch(e) {
+                    showToast('Gunakan tombol unduh PNG.', 'info');
+                }
+            });
+        }
+
+        function printSingleSticker() {
+            const previewCard = document.getElementById('single-preview-card');
+            const printContent = document.getElementById('print-content');
+            
+            printContent.innerHTML = '';
+            const clone = previewCard.cloneNode(true);
+            clone.classList.remove('my-1');
+            clone.classList.add('w-[200px]', 'border-black');
+            printContent.appendChild(clone);
+
+            window.print();
+        }
+
+        function updateBatchCount() {
+            const val = document.getElementById('batch-input').value;
+            const lines = val.split('\n').filter(l => l.trim().length > 0);
+            document.getElementById('batch-count-badge').textContent = `${lines.length} Kode`;
+        }
+
+        function generateBatch() {
+            const val = document.getElementById('batch-input').value;
+            const lines = val.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const container = document.getElementById('batch-results-container');
+            const type = document.querySelector('input[name="batch-type"]:checked').value;
+            const printBtn = document.getElementById('btn-print-batch');
+
+            if (lines.length === 0) {
+                showToast('Masukkan nomor PLU terlebih dahulu!', 'error');
+                return;
+            }
+
+            container.innerHTML = '';
+
+            lines.forEach((code) => {
+                const matched = findItemByPLU(code);
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center shadow-sm';
+
+                if (matched) {
+                    const descEl = document.createElement('p');
+                    descEl.className = 'font-bold text-[10px] text-slate-900 dark:text-white uppercase leading-tight line-clamp-2 mb-1';
+                    descEl.textContent = matched.desc;
+                    card.appendChild(descEl);
+                }
+
+                if (type === 'qr') {
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'max-w-full h-auto my-1';
+                    new QRious({
+                        element: canvas,
+                        size: 130,
+                        value: code,
+                        level: 'M'
+                    });
+                    card.appendChild(canvas);
+                } else {
+                    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    svg.className = 'max-w-full h-auto my-1';
+                    card.appendChild(svg);
+                    try {
+                        JsBarcode(svg, code, {
+                            format: "CODE128",
+                            lineColor: "#000",
+                            width: 1.4,
+                            height: 40,
+                            displayValue: false
+                        });
+                    } catch(e) {}
+                }
+
+                const label = document.createElement('p');
+                label.className = 'font-mono text-xs font-bold text-slate-700 dark:text-slate-300 truncate w-full mt-1';
+                label.textContent = code;
+                card.appendChild(label);
+
+                container.appendChild(card);
+            });
+
+            printBtn.disabled = false;
+            showToast(`Berhasil merender ${lines.length} kode!`);
+        }
+
+        function printBatchGrid() {
+            const container = document.getElementById('batch-results-container');
+            const printContent = document.getElementById('print-content');
+            
+            printContent.innerHTML = '';
+            const cards = container.children;
+            for (let card of cards) {
+                const clone = card.cloneNode(true);
+                clone.classList.add('w-[150px]', 'p-2', 'border', 'border-black', 'text-black');
+                printContent.appendChild(clone);
+            }
+
+            window.print();
+        }
+
+        function saveToHistoryFromSingle() {
+            const code = document.getElementById('single-code-input').value.trim();
+            if (!code) {
+                showToast('Kode tidak boleh kosong!', 'error');
+                return;
+            }
+
+            const matched = findItemByPLU(code);
+            let history = JSON.parse(localStorage.getItem('retail_qr_history') || '[]');
+            
+            const existingIndex = history.findIndex(item => item.code === code);
+            if (existingIndex > -1) {
+                history.splice(existingIndex, 1);
+            }
+
+            history.unshift({
+                code: code,
+                desc: matched ? matched.desc : 'Kode Custom',
+                date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+            });
+
+            if (history.length > 50) history.pop();
+
+            localStorage.setItem('retail_qr_history', JSON.stringify(history));
+            loadHistory();
+            showToast('Kode tersimpan!');
+        }
+
+        function loadHistory() {
+            const historyList = document.getElementById('history-list');
+            const history = JSON.parse(localStorage.getItem('retail_qr_history') || '[]');
+
+            if (history.length === 0) {
+                historyList.innerHTML = `
+                    <div class="text-center py-6 text-slate-400">
+                        <i class="fa-solid fa-folder-open text-2xl mb-1 opacity-40"></i>
+                        <p class="text-xs font-normal">Belum ada riwayat simpanan.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            historyList.innerHTML = '';
+            history.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2.5 flex items-center justify-between hover:border-primary transition';
+                
+                card.innerHTML = `
+                    <div class="flex items-center space-x-2.5 truncate">
+                        <div class="w-8 h-8 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/50 text-primary font-bold rounded-lg flex items-center justify-center shrink-0 text-xs">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </div>
+                        <div class="truncate">
+                            <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 truncate uppercase">${item.desc || item.code}</h4>
+                            <p class="text-[10px] text-slate-400 font-mono">PLU: ${item.code} • ${item.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1 shrink-0 ml-2">
+                        <button onclick="useHistoryItem('${item.code}')" class="px-2.5 py-1 text-primary hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold">
+                            Pakai
+                        </button>
+                        <button onclick="deleteHistoryItem(${idx})" class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg text-xs">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                historyList.appendChild(card);
+            });
+        }
+
+        function useHistoryItem(code) {
+            switchTab('tab-single');
+            document.getElementById('single-code-input').value = code;
+            document.getElementById('clear-single-input').classList.remove('hidden');
+            renderSingleCode();
+            showToast('Kode dimuat!');
+        }
+
+        function deleteHistoryItem(idx) {
+            let history = JSON.parse(localStorage.getItem('retail_qr_history') || '[]');
+            history.splice(idx, 1);
+            localStorage.setItem('retail_qr_history', JSON.stringify(history));
+            loadHistory();
+            showToast('Item dihapus.');
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('retail_qr_history');
+            loadHistory();
+            showToast('Riwayat dibersihkan.');
+        }
+
+        function switchTab(tabId) {
+            if (tabId !== 'tab-scan' && isCameraActive) {
+                stopCameraScanner();
+            }
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-primary', 'text-primary', 'font-bold');
+                btn.classList.add('border-transparent');
+            });
+
+            document.getElementById(tabId).classList.add('active');
+            
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent');
+                activeBtn.classList.add('border-primary', 'text-primary', 'font-bold');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.textContent = message;
+
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-red-500 text-base';
+            } else if (type === 'info') {
+                toastIcon.className = 'fa-solid fa-circle-info text-blue-500 text-base';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-primary text-base';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
             setTimeout(() => {
-                modal.style.display = 'none';
-                closeEverything();
-            }, 600);
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
         }
-
-        function closeEverything() {
-            stickyNote.classList.remove('active');
-            overlay.classList.remove('active');
-            wrapper.style.transform = 'scale(1) blur(0)';
-            wrapper.style.filter = 'none';
-        }
-
-        window.onload = init;
     </script>
 </body>
 </html>
