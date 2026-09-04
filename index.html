@@ -259,12 +259,21 @@
             <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="font-bold text-sm text-slate-800 dark:text-slate-100">Scan Barcode / QR Barang</h2>
+                        <h2 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                            Scan Barcode / QR Barang
+                        </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">Arahkan kamera ke barcode fisik barang di rak.</p>
                     </div>
-                    <button onclick="toggleCameraScanner()" id="btn-toggle-cam" class="bg-primary hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-xl transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-camera"></i> <span id="cam-btn-text">Buka Kamera</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <!-- Tombol Pengaturan Suara Beep Scan -->
+                        <button id="btn-toggle-sound" onclick="toggleScanSound()" class="p-2 bg-emerald-50 dark:bg-slate-800 text-primary rounded-xl border border-emerald-200 dark:border-slate-700 hover:bg-emerald-100 transition text-xs font-semibold flex items-center gap-1" title="Atur Suara Beep Scan">
+                            <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                            <span id="sound-status-text" class="hidden sm:inline">Suara ON</span>
+                        </button>
+                        <button onclick="toggleCameraScanner()" id="btn-toggle-cam" class="bg-primary hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-camera"></i> <span id="cam-btn-text">Buka Kamera</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Camera viewport container -->
@@ -383,6 +392,54 @@
         let html5QrcodeScanner = null;
         let isCameraActive = false;
         let lastScannedCode = '';
+        let soundEnabled = true; // State audio beep scanner
+        window.lastScanTime = 0;
+
+        // Generator Suara Beep Scanner Kasir Retail (Web Audio API)
+        function playScanBeep() {
+            if (!soundEnabled) return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const audioCtx = new AudioCtx();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(2000, audioCtx.currentTime); // Frekuensi tinggi nada khas scanner
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {
+                console.warn('Gagal memutar suara beep:', e);
+            }
+        }
+
+        // Toggle Suara Scan ON/OFF
+        function toggleScanSound() {
+            soundEnabled = !soundEnabled;
+            const soundIcon = document.getElementById('sound-icon');
+            const soundText = document.getElementById('sound-status-text');
+            const soundBtn = document.getElementById('btn-toggle-sound');
+
+            if (soundEnabled) {
+                soundIcon.className = 'fa-solid fa-volume-high';
+                if (soundText) soundText.textContent = 'Suara ON';
+                soundBtn.className = 'p-2 bg-emerald-50 dark:bg-slate-800 text-primary rounded-xl border border-emerald-200 dark:border-slate-700 hover:bg-emerald-100 transition text-xs font-semibold flex items-center gap-1';
+                playScanBeep(); // Tes bunyi beep saat diaktifkan
+                showToast('Suara scan DIAKTIFKAN');
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-xmark';
+                if (soundText) soundText.textContent = 'Suara OFF';
+                soundBtn.className = 'p-2 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition text-xs font-semibold flex items-center gap-1';
+                showToast('Suara scan DIMATIKAN', 'info');
+            }
+        }
 
         // Default Sample Fallback if CSV is unreachable
         const fallbackDatabase = [
@@ -404,12 +461,11 @@
 
         // Fetch CSV from repository with fallback to GitHub Raw
         async function fetchPLUData() {
-            updateDbStatus('loading', 'Memuat PLUV2.csv...');
+            updateDbStatus('loading', 'Memuat plu.csv...');
             
-            // Primary paths for PLUV2.csv with fallbacks to plu.csv
+            // Primary path: relative './plu.csv' (works on GitHub Pages and local server)
+            // Secondary path: GitHub Raw URL for direct remote execution
             const csvSources = [
-                './PLUV2.csv',
-                'https://raw.githubusercontent.com/fachry2006/PLUINDOMARTBYRETAILINKU/main/PLUV2.csv',
                 './plu.csv',
                 'https://raw.githubusercontent.com/fachry2006/PLUINDOMARTBYRETAILINKU/main/plu.csv'
             ];
@@ -432,7 +488,7 @@
                 pluDatabase = parseCSV(loadedText);
                 isDbLoaded = true;
                 updateDbStatus('success', `${pluDatabase.length} Data PLU Terhubung`);
-                showToast(`${pluDatabase.length} Data barang (PLUV2) siap dicari!`);
+                showToast(`${pluDatabase.length} Data barang siap dicari!`);
             } else {
                 console.warn('Memakai data cadangan internal.');
                 pluDatabase = fallbackDatabase;
@@ -444,7 +500,7 @@
             renderSingleCode();
         }
 
-        // Custom CSV Parser handling 2-column (PLU, NAME) and 3-column (PLU, NAME, TAG) formats
+        // Custom CSV Parser handling quotes and multiple commas
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             const result = [];
@@ -453,32 +509,23 @@
                 const line = lines[i].trim();
                 if (!line) continue;
 
-                let plu = "", desc = "", ptag = "E";
+                let plu = "", desc = "", ptag = "";
                 const firstComma = line.indexOf(',');
+                const lastComma = line.lastIndexOf(',');
 
-                if (firstComma !== -1) {
+                if (firstComma !== -1 && lastComma > firstComma) {
                     plu = line.substring(0, firstComma).trim().replace(/^"|"$/g, '');
-                    let rest = line.substring(firstComma + 1).trim();
-
-                    const lastComma = rest.lastIndexOf(',');
-                    if (lastComma !== -1) {
-                        const possibleTag = rest.substring(lastComma + 1).trim().replace(/^"|"$/g, '');
-                        // If the 3rd column is a short tag like E, D, PCS, etc.
-                        if (possibleTag.length <= 3 && possibleTag.toUpperCase() === possibleTag) {
-                            ptag = possibleTag || 'E';
-                            desc = rest.substring(0, lastComma).trim().replace(/^"|"$/g, '');
-                        } else {
-                            desc = rest.replace(/^"|"$/g, '');
-                        }
-                    } else {
-                        desc = rest.replace(/^"|"$/g, '');
-                    }
+                    desc = line.substring(firstComma + 1, lastComma).trim().replace(/^"|"$/g, '');
+                    ptag = line.substring(lastComma + 1).trim().replace(/^"|"$/g, '');
+                } else if (firstComma !== -1) {
+                    plu = line.substring(0, firstComma).trim().replace(/^"|"$/g, '');
+                    desc = line.substring(firstComma + 1).trim().replace(/^"|"$/g, '');
                 } else {
                     plu = line;
                 }
 
                 if (plu) {
-                    result.push({ plu, desc: desc || plu, ptag: ptag || 'E' });
+                    result.push({ plu, desc, ptag: ptag || 'E' });
                 }
             }
             return result;
@@ -745,7 +792,18 @@
         }
 
         function onScanSuccess(decodedText) {
-            lastScannedCode = decodedText.trim();
+            const cleanCode = decodedText.trim();
+            
+            // Hindari trigger berulang secara berturut-turut dalam jeda 1.5 detik
+            if (lastScannedCode === cleanCode && (Date.now() - window.lastScanTime < 1500)) {
+                return;
+            }
+            window.lastScanTime = Date.now();
+            lastScannedCode = cleanCode;
+
+            // Bunyikan efek suara scanner kasir
+            playScanBeep();
+
             const resultBox = document.getElementById('scan-result-box');
             const scanDesc = document.getElementById('scan-desc');
             const scanCode = document.getElementById('scan-code');
@@ -866,6 +924,52 @@
             printArea.classList.add('hidden');
         }
 
+            triggerDownload(dataUrl, `RetaLink_${text}.png`);
+        }
+
+        function triggerDownload(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Gambar berhasil diunduh!');
+        }
+
+        function copySingleImage() {
+            const type = document.querySelector('input[name="code-type"]:checked').value;
+            if (type !== 'qr') {
+                showToast('Salin gambar didukung untuk QR Code.', 'info');
+            }
+            const canvas = document.getElementById('single-qr-canvas');
+            canvas.toBlob(blob => {
+                try {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    navigator.clipboard.write([item]).then(() => {
+                        showToast('Gambar QR disalin!');
+                    }).catch(() => {
+                        showToast('Silakan gunakan unduh PNG.', 'info');
+                    });
+                } catch(e) {
+                    showToast('Gunakan tombol unduh PNG.', 'info');
+                }
+            });
+        }
+
+        function printSingleSticker() {
+            const previewCard = document.getElementById('single-preview-card');
+            const printContent = document.getElementById('print-content');
+            
+            printContent.innerHTML = '';
+            const clone = previewCard.cloneNode(true);
+            clone.classList.remove('my-1');
+            clone.classList.add('w-[200px]', 'border-black');
+            printContent.appendChild(clone);
+
+            window.print();
+        }
+
         function updateBatchCount() {
             const val = document.getElementById('batch-input').value;
             const lines = val.split('\n').filter(l => l.trim().length > 0);
@@ -951,6 +1055,9 @@
             printArea.classList.remove('hidden');
             window.print();
             printArea.classList.add('hidden');
+        }
+
+            window.print();
         }
 
         function saveToHistoryFromSingle() {
